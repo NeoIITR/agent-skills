@@ -20,6 +20,7 @@ import argparse
 import csv
 import json
 import os
+import ssl
 import statistics
 import sys
 import time
@@ -32,6 +33,12 @@ from pathlib import Path
 
 BASE_URL = "https://trustmrr.com/api/v1"
 REQUEST_INTERVAL = 3.1  # 20 requests/minute limit
+
+try:  # python.org builds on macOS ship without CA certificates; certifi fills the gap
+    import certifi
+    SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
+except ImportError:
+    SSL_CONTEXT = ssl.create_default_context()
 
 # First matching key wins. Dotted paths reach into nested objects.
 FIELDS = {
@@ -139,7 +146,7 @@ def api_get(path, api_key, params=None):
     })
     for attempt in range(5):
         try:
-            with urllib.request.urlopen(request, timeout=30) as response:
+            with urllib.request.urlopen(request, timeout=30, context=SSL_CONTEXT) as response:
                 time.sleep(REQUEST_INTERVAL)
                 return json.load(response)
         except urllib.error.HTTPError as err:
@@ -150,6 +157,12 @@ def api_get(path, api_key, params=None):
                 continue
             body = err.read().decode(errors="replace")[:300]
             sys.exit(f"HTTP {err.code} for {url}: {body}")
+        except urllib.error.URLError as err:
+            if isinstance(err.reason, ssl.SSLCertVerificationError):
+                sys.exit("SSL certificate check failed. On macOS with python.org Python, run\n"
+                         '  open "/Applications/Python 3.X/Install Certificates.command"\n'
+                         "(use your version number), or: pip install certifi")
+            sys.exit(f"Could not reach {url}: {err.reason}")
     sys.exit(f"Gave up on {url} after repeated errors")
 
 

@@ -8,6 +8,8 @@ Defaults: launched in the last 12 months, $500–$5,000 MRR, at least 2 consecut
 
 Needs Python 3.9+ (standard library only) and a TrustMRR API key from the developer dashboard.
 
+On macOS with Python from python.org, run `open "/Applications/Python 3.X/Install Certificates.command"` once (use your version), or `pip install certifi`, otherwise HTTPS calls fail with `CERTIFICATE_VERIFY_FAILED`.
+
 ```bash
 export TRUSTMRR_API_KEY=tmrr_...
 python momentum_screen.py --inspect   # 1. check what the API returns
